@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+# Hare command line interface script.
+# Run <tt>hare -h</tt> to get more usage.
+
+require 'hare'
+Hare::Runner.new(ARGV).run!
