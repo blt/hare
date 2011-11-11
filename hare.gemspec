@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.version     = Hare::VERSION
   s.authors     = ["Brian L. Troutwine"]
   s.email       = ["brian@troutwine.us"]
-  s.homepage    = ""
+  s.homepage    = "https://github.com/blt/hare"
   s.summary     = %q{A small command-line tool for publishing to and consuming from AMQP queues.}
   s.description = %q{The one pain-point I have had with AMQP is the lack of a series of command line tools for smoke-testing components or sending my own messages through a queue. Hare can be toggled either to produce messages, or to sit and listen/report for them.}
 
