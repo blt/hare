@@ -107,7 +107,7 @@ module Hare
       b.start
 
       eopts = amqp[:exchange]
-      exch = b.exchange(:name => eopts[:name], :type => eopts[:type])
+      exch = b.exchange(eopts[:name], :type => eopts[:type])
 
       if @options[:publish]
         exch.publish(@arguments[0], :key => amqp[:key])
