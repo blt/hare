@@ -48,9 +48,14 @@ module Hare
         opts.on("--exchange_name EXCHANGE", "The name of the AMQP exchange on which to connect") {
           |exc| @options[:amqp][:exchange][:name] = exc
         }
-        opts.on("--exchange_type TYPE", "The type of the AMQP exchange on which to connect") {
-          |exc| @options[:amqp][:exchange][:type] = exc
-        }
+        opts.on("--exchange_type TYPE", "The type of the AMQP exchange on which to connect") do |type|
+          if ['topic', 'direct', 'fanout'].member? type
+            @options[:amqp][:exchange][:type] = type.to_sym
+          else
+            puts "Exchange type must be (topic|direct|fanout), not #{type}."
+            exit 1
+          end
+        end
         opts.on("--username NAME", "The AMQP username.") {
           |u| @options[:amqp][:username] = u
         }
