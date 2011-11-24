@@ -110,7 +110,7 @@ module Hare
       exch = b.exchange(eopts[:name], :type => eopts[:type])
 
       if @options[:publish]
-        exch.publish(@arguments[0], :key => amqp[:key])
+        exch.publish(@arguments[0].rstrip + "\n", :key => amqp[:key])
       else
         q = b.queue(amqp[:queue])
         q.bind(exch, :key => amqp[:key])
