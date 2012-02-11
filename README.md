@@ -25,11 +25,11 @@ Example Usage
 
 We'll send a message over the localhost message bus, exchange 'events', vhost '/' with route-key 'dev.event'. First, get a `hare` into listener mode:
 
-    $ hare --exchange_name events --route_key dev.event
+    $ hare --exchange_name events --exchange_type topic --route_key dev.event
 
 and we'll send a message:
 
-    $ hare --exchange_name events --route_key dev.event --producer "that wasn't so bad"
+    $ hare --exchange_name events --exchange_type topic --route_key dev.event --producer "that wasn't so bad"
 
 Miscellania
 -----------

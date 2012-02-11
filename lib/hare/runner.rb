@@ -1,5 +1,6 @@
 require 'optparse'
-require 'bunny'
+require 'amqp'
+require 'eventmachine'
 
 module Hare
   trap(:INT) { puts; exit }
@@ -16,14 +17,17 @@ module Hare
         :publish => false,
         :amqp => {
           :host => 'localhost',
-          :port => '5672',
+          :port => nil,
           :exchange => {
             :name => nil,
-            :kind => :direct,
+            :kind => :topic,
           },
           :queue => '',
           :vhost => '/',
-          :timeout => 0
+          :via_ssl => false,
+          :ssl_cert => nil,
+          :ssl_key => nil,
+          :ssl_verify => false
         }
       }
 
@@ -50,7 +54,7 @@ module Hare
         }
         opts.on("--exchange_type TYPE", "The type of the AMQP exchange on which to connect") do |type|
           if ['topic', 'direct', 'fanout'].member? type
-            @options[:amqp][:exchange][:type] = type.to_sym
+            @options[:amqp][:exchange][:kind] = type.to_sym
           else
             puts "Exchange type must be (topic|direct|fanout), not #{type}."
             exit 1
@@ -68,14 +72,17 @@ module Hare
         opts.on("--logging", "Enable logging of AMQP interactions.") {
           @options[:logging] = true
         }
+        opts.on("--ssl_cert CERT", "Path to SSL chain certificates") do |c|
+          @options[:amqp][:ssl_cert] = c
+        end
+        opts.on("--ssl_key PRIVKEY", "Path to SSL private key") do |k|
+          @options[:amqp][:ssl_key] = k
+        end
 
         opts.separator ""
         opts.separator "Consumer Options: "
         opts.on("--queue QUEUE", "The queue on which to listen.") {
           |q| @options[:amqp][:queue] = q
-        }
-        opts.on("--timeout TIME", "The time after which queue subscription will end.") {
-          |t| @options[:amqp][:timeout] = t
         }
 
         opts.separator ""
@@ -103,24 +110,42 @@ module Hare
     def run!
       amqp = @options[:amqp]
 
-      b = Bunny.new(:host => amqp[:host], :port => amqp[:port], :logging => amqp[:logging])
-      b.start
+      EventMachine.run do
+        AMQP.connect(:host => amqp[:host], :port => amqp[:port], :vhost => amqp[:vhost],
+          :username => amqp[:username], :password => amqp[:password], :ssl => {
+            :cert_chain_file => amqp[:ssl_cert],
+            :private_key_file => amqp[:ssl_key]
+          },
+          :on_tcp_connection_failure => Proc.new { |settings|
+            puts "TCP Connection failure; details:\n\n#{settings.inspect}\n\n"; exit 1
+          },
+          :on_possible_authentication_failure => Proc.new { |settings|
+            puts "Authentication failure, I'm afraid:\n\n#{settings.inspect}\n\n"; exit 1
+          }) do |connection|
 
-      eopts = amqp[:exchange]
-      exch = b.exchange(eopts[:name], :type => eopts[:type])
+          channel  = AMQP::Channel.new(connection)
+          case amqp[:exchange][:kind]
+          when :direct
+            exchange = channel.direct(amqp[:exchange][:name])
+          when :fanout
+            exchange = channel.fanout(amqp[:exchange][:name])
+          when :topic
+            exchange = channel.topic(amqp[:exchange][:name])
+          end
 
-      if @options[:publish]
-        exch.publish(@arguments[0], :key => amqp[:key])
-      else
-        q = b.queue(amqp[:queue])
-        q.bind(exch, :key => amqp[:key])
-        q.subscribe(:timeout => amqp[:timeout]) do |msg|
-          puts "#{msg[:payload]}"
+          if @options[:publish]
+            exchange.publish(@arguments[0], :routing_key => amqp[:key]) do
+              connection.disconnect { EM.stop }
+            end
+          else
+            channel.queue(amqp[:queue]).bind(exchange, :key => amqp[:key]).subscribe do |payload|
+              puts payload
+            end
+          end
+
         end
-      end
-
-      b.stop
-    end
+      end # EM
+    end # run!
 
   end
 end

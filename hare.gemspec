@@ -19,5 +19,5 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
 
   # specify any dependencies here; for example:
-  s.add_runtime_dependency "bunny", "~> 0.7.8"
+  s.add_runtime_dependency "amqp", '>= 0.9.2'
 end
